@@ -1,4 +1,4 @@
-# NetFS — FUSE Network Filesystem
+# NetFS - FUSE Network Filesystem
 
 A client/server network filesystem built with FUSE3 and TCP sockets in C.
 The **server** exposes a real directory over the network, and the **client**
