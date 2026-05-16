@@ -1,5 +1,5 @@
 #!/bin/bash
-# demo.sh — Full end-to-end demo: starts server, runs API example, cleans up
+# run everything: build, start server, run example, cleanup
 #
 # Usage: ./demo.sh
 

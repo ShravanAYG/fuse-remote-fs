@@ -1,10 +1,5 @@
 #!/bin/bash
-# mount_client.sh — Mount the NetFS FUSE client
-#
-# Usage: ./mount_client.sh [host] [port] [mountpoint]
-#   host       — server IP (default: 127.0.0.1)
-#   port       — server port (default: 9000)
-#   mountpoint — local mount path (default: ./mnt)
+# mount the client
 
 set -e
 

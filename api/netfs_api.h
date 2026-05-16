@@ -1,16 +1,5 @@
 /*
- * netfs_api.h — NetFS Client API
- *
- * A simple C library for accessing files on a NetFS server.
- * Any C program can link against this to read/write remote files
- * into local char buffers without mounting a FUSE filesystem.
- *
- * Example:
- *   netfs_ctx *ctx = netfs_connect("127.0.0.1", 9000);
- *   char buf[4096];
- *   int n = netfs_read_file(ctx, "/hello.txt", buf, sizeof(buf), 0);
- *   netfs_write_file(ctx, "/hello.txt", "new data", 8, 0);
- *   netfs_disconnect(ctx);
+ * netfs_api.h - Client API for NetFS
  */
 
 #ifndef NETFS_API_H
@@ -23,12 +12,9 @@
 /* Opaque connection context */
 typedef struct netfs_ctx netfs_ctx;
 
-/* ── Connection ──────────────────────────────────────────────────── */
 
-/*
- * Connect to a NetFS server.
- * Returns a context handle, or NULL on failure.
- */
+
+// connect/disconnect
 netfs_ctx *netfs_connect(const char *host, int port);
 
 /*
@@ -36,7 +22,7 @@ netfs_ctx *netfs_connect(const char *host, int port);
  */
 void netfs_disconnect(netfs_ctx *ctx);
 
-/* ── File I/O ────────────────────────────────────────────────────── */
+
 
 /*
  * Read up to `size` bytes from `path` at `offset` into `buf`.
@@ -64,7 +50,7 @@ int netfs_create_file(netfs_ctx *ctx, const char *path, uint32_t mode);
  */
 int netfs_delete_file(netfs_ctx *ctx, const char *path);
 
-/* ── Directory Operations ────────────────────────────────────────── */
+
 
 /*
  * Create a directory at `path` with the given permissions.
@@ -78,16 +64,11 @@ int netfs_mkdir(netfs_ctx *ctx, const char *path, uint32_t mode);
  */
 int netfs_rmdir(netfs_ctx *ctx, const char *path);
 
-/*
- * List directory contents at `path`.
- * Fills `names` array with up to `max_entries` null-terminated strings.
- * Each string is malloc'd — caller must free each entry.
- * Returns number of entries on success, or negative errno on failure.
- */
+// returns entries count. names[] entries must be freed.
 int netfs_list_dir(netfs_ctx *ctx, const char *path,
                    char **names, int max_entries);
 
-/* ── Metadata ────────────────────────────────────────────────────── */
+
 
 /*
  * Get file/directory attributes (stat).

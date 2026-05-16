@@ -1,7 +1,5 @@
 #!/bin/bash
-# unmount_client.sh — Unmount the NetFS FUSE client
-#
-# Usage: ./unmount_client.sh [mountpoint]
+# unmount it
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MOUNTPOINT="${1:-$SCRIPT_DIR/mnt}"

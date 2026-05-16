@@ -1,17 +1,5 @@
 /*
- * handlers.c — Server-side operation handlers for NetFS
- *
- * Each handler receives the already-deserialized payload from the client,
- * performs the real filesystem operation on the backing directory,
- * and sends the response back over the socket.
- *
- * Payload format conventions (all multi-byte fields in host order since
- * both sides serialize/deserialize explicitly):
- *
- * For most ops:  [ path_len(2B) ][ path(varN) ] + op-specific fields
- * For rename:    [ path_len(2B) ][ old_path ][ path_len(2B) ][ new_path ]
- * For read:      [ path_len(2B) ][ path ][ offset(8B) ][ size(4B) ]
- * For write:     [ path_len(2B) ][ path ][ offset(8B) ][ data_len(4B) ][ data ]
+ * handlers.c - Server side logic for filesystem ops
  */
 
 #include "handlers.h"
@@ -28,12 +16,9 @@
 #include <unistd.h>
 #include <utime.h>
 
-/* ── Helpers ─────────────────────────────────────────────────────── */
+// helpers
 
-/*
- * Build the full path: base_dir + relative_path
- * Returns a malloc'd string the caller must free.
- */
+// Build full path: base_dir + rel_path
 static char *build_full_path(const char *base_dir, const char *rel_path)
 {
     size_t blen = strlen(base_dir);
@@ -65,12 +50,7 @@ static char *build_full_path(const char *base_dir, const char *rel_path)
     return full;
 }
 
-/*
- * Extract a path from the payload at the given offset.
- * Format: [ path_len : 2 bytes ][ path : path_len bytes ]
- * Returns the path as a null-terminated malloc'd string.
- * Updates *offset to point past the path.
- */
+// Extract path from payload [len:2][path:len]
 static char *extract_path(const void *payload, uint32_t payload_len,
                           uint32_t *offset)
 {
@@ -90,7 +70,7 @@ static char *extract_path(const void *payload, uint32_t payload_len,
     return path;
 }
 
-/* ── GETATTR ─────────────────────────────────────────────────────── */
+
 
 void handle_getattr(int client_fd, const char *base_dir,
                     const void *payload, uint32_t payload_len)
@@ -123,7 +103,7 @@ void handle_getattr(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, 0, &wire, sizeof(wire));
 }
 
-/* ── READDIR ─────────────────────────────────────────────────────── */
+
 
 void handle_readdir(int client_fd, const char *base_dir,
                     const void *payload, uint32_t payload_len)
@@ -149,10 +129,7 @@ void handle_readdir(int client_fd, const char *base_dir,
         return;
     }
 
-    /*
-     * Build a response payload: sequence of [ name_len(2B) ][ name ]
-     * We'll build it in a dynamic buffer.
-     */
+    // build response: seq of [len:2][name]
     size_t buf_cap = 4096;
     size_t buf_len = 0;
     char *buf = malloc(buf_cap);
@@ -188,7 +165,7 @@ void handle_readdir(int client_fd, const char *base_dir,
     free(buf);
 }
 
-/* ── OPEN ────────────────────────────────────────────────────────── */
+
 
 void handle_open(int client_fd, const char *base_dir,
                  const void *payload, uint32_t payload_len)
@@ -200,7 +177,7 @@ void handle_open(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Extract flags (4 bytes) */
+    // get flags
     int32_t flags = 0;
     if (off + 4 <= payload_len) {
         const uint8_t *p = (const uint8_t *)payload;
@@ -215,7 +192,7 @@ void handle_open(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Just check if the file can be opened with those flags */
+    // try open
     int fd = open(full, flags);
     free(full);
 
@@ -227,7 +204,7 @@ void handle_open(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, 0, NULL, 0);
 }
 
-/* ── READ ────────────────────────────────────────────────────────── */
+
 
 void handle_read(int client_fd, const char *base_dir,
                  const void *payload, uint32_t payload_len)
@@ -239,7 +216,7 @@ void handle_read(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Extract offset (8 bytes) and size (4 bytes) */
+    // offset (8B) and size (4B)
     if (off + 12 > payload_len) {
         free(rel_path);
         netfs_send_response(client_fd, -EINVAL, NULL, 0);
@@ -269,7 +246,7 @@ void handle_read(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Cap read to 4 MiB */
+    // cap read to 4MB
     if (read_size > 4 * 1024 * 1024)
         read_size = 4 * 1024 * 1024;
 
@@ -293,7 +270,7 @@ void handle_read(int client_fd, const char *base_dir,
     free(data);
 }
 
-/* ── WRITE ───────────────────────────────────────────────────────── */
+
 
 void handle_write(int client_fd, const char *base_dir,
                   const void *payload, uint32_t payload_len)
@@ -305,7 +282,7 @@ void handle_write(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Extract offset (8 bytes) and data_len (4 bytes) */
+    // offset (8B) and len (4B)
     if (off + 12 > payload_len) {
         free(rel_path);
         netfs_send_response(client_fd, -EINVAL, NULL, 0);
@@ -349,11 +326,11 @@ void handle_write(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Return bytes written in status field */
+    // written bytes
     netfs_send_response(client_fd, (int32_t)n, NULL, 0);
 }
 
-/* ── CREATE ──────────────────────────────────────────────────────── */
+
 
 void handle_create(int client_fd, const char *base_dir,
                    const void *payload, uint32_t payload_len)
@@ -365,7 +342,7 @@ void handle_create(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Extract mode (4 bytes) */
+    // mode (4B)
     uint32_t mode = 0644;
     if (off + 4 <= payload_len) {
         const uint8_t *p = (const uint8_t *)payload;
@@ -391,7 +368,7 @@ void handle_create(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, 0, NULL, 0);
 }
 
-/* ── MKDIR ───────────────────────────────────────────────────────── */
+
 
 void handle_mkdir(int client_fd, const char *base_dir,
                   const void *payload, uint32_t payload_len)
@@ -427,7 +404,7 @@ void handle_mkdir(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, 0, NULL, 0);
 }
 
-/* ── UNLINK ──────────────────────────────────────────────────────── */
+
 
 void handle_unlink(int client_fd, const char *base_dir,
                    const void *payload, uint32_t payload_len)
@@ -452,7 +429,7 @@ void handle_unlink(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, ret < 0 ? -errno : 0, NULL, 0);
 }
 
-/* ── RMDIR ───────────────────────────────────────────────────────── */
+
 
 void handle_rmdir(int client_fd, const char *base_dir,
                   const void *payload, uint32_t payload_len)
@@ -477,7 +454,7 @@ void handle_rmdir(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, ret < 0 ? -errno : 0, NULL, 0);
 }
 
-/* ── RENAME ──────────────────────────────────────────────────────── */
+
 
 void handle_rename(int client_fd, const char *base_dir,
                    const void *payload, uint32_t payload_len)
@@ -515,7 +492,7 @@ void handle_rename(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, ret < 0 ? -errno : 0, NULL, 0);
 }
 
-/* ── TRUNCATE ────────────────────────────────────────────────────── */
+
 
 void handle_truncate(int client_fd, const char *base_dir,
                      const void *payload, uint32_t payload_len)
@@ -527,7 +504,7 @@ void handle_truncate(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Extract new size (8 bytes) */
+    // new size (8B)
     int64_t new_size = 0;
     if (off + 8 <= payload_len) {
         const uint8_t *p = (const uint8_t *)payload;
@@ -548,7 +525,7 @@ void handle_truncate(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, ret < 0 ? -errno : 0, NULL, 0);
 }
 
-/* ── CHMOD ───────────────────────────────────────────────────────── */
+
 
 void handle_chmod(int client_fd, const char *base_dir,
                   const void *payload, uint32_t payload_len)
@@ -580,7 +557,7 @@ void handle_chmod(int client_fd, const char *base_dir,
     netfs_send_response(client_fd, ret < 0 ? -errno : 0, NULL, 0);
 }
 
-/* ── UTIMENS ─────────────────────────────────────────────────────── */
+
 
 void handle_utimens(int client_fd, const char *base_dir,
                     const void *payload, uint32_t payload_len)
@@ -592,24 +569,24 @@ void handle_utimens(int client_fd, const char *base_dir,
         return;
     }
 
-    /* Extract atime_sec(8) + atime_nsec(8) + mtime_sec(8) + mtime_nsec(8) = 32 bytes */
+    // times
     struct timespec ts[2] = {{0, 0}, {0, 0}};
     if (off + 32 <= payload_len) {
         const uint8_t *p = (const uint8_t *)payload;
         int64_t val;
-        /* atime_sec */
+        // atime
         val = 0;
         for (int i = 0; i < 8; i++) val = (val << 8) | p[off + i];
         ts[0].tv_sec = val; off += 8;
-        /* atime_nsec */
+        // atime_ns
         val = 0;
         for (int i = 0; i < 8; i++) val = (val << 8) | p[off + i];
         ts[0].tv_nsec = val; off += 8;
-        /* mtime_sec */
+        // mtime
         val = 0;
         for (int i = 0; i < 8; i++) val = (val << 8) | p[off + i];
         ts[1].tv_sec = val; off += 8;
-        /* mtime_nsec */
+        // mtime_ns
         val = 0;
         for (int i = 0; i < 8; i++) val = (val << 8) | p[off + i];
         ts[1].tv_nsec = val; off += 8;

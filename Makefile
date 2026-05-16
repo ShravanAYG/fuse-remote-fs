@@ -1,4 +1,4 @@
-# NetFS — FUSE Network Filesystem Makefile
+# NetFS Makefile
 
 CC       = gcc
 CFLAGS   = -Wall -Wextra -g $(shell pkg-config --cflags fuse3)

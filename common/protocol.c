@@ -1,5 +1,5 @@
 /*
- * protocol.c — Wire protocol serialization/deserialization for NetFS
+ * protocol.c - Wire protocol for NetFS
  */
 
 #include "protocol.h"
@@ -10,7 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
-/* ── Reliable I/O ────────────────────────────────────────────────── */
+
 
 int netfs_read_full(int fd, void *buf, size_t len)
 {
@@ -38,7 +38,7 @@ int netfs_write_full(int fd, const void *buf, size_t len)
     return 0;
 }
 
-/* ── Request Send/Recv ───────────────────────────────────────────── */
+
 
 int netfs_send_request(int fd, uint8_t opcode,
                        const void *payload, uint32_t payload_len)
@@ -68,7 +68,7 @@ int netfs_recv_request(int fd, uint8_t *opcode_out,
     *payload_len_out = ntohl(hdr.payload_len);
 
     if (*payload_len_out > 0) {
-        /* Sanity cap: 64 MiB max payload */
+        // max 64MB payload
         if (*payload_len_out > 64 * 1024 * 1024) {
             return -1;
         }
@@ -86,7 +86,7 @@ int netfs_recv_request(int fd, uint8_t *opcode_out,
     return 0;
 }
 
-/* ── Response Send/Recv ──────────────────────────────────────────── */
+
 
 int netfs_send_response(int fd, int32_t status,
                         const void *payload, uint32_t payload_len)
@@ -133,7 +133,7 @@ int netfs_recv_response(int fd, int32_t *status_out,
     return 0;
 }
 
-/* ── Stat Conversion ─────────────────────────────────────────────── */
+
 
 void netfs_stat_to_wire(const struct stat *st, netfs_stat_t *wire)
 {

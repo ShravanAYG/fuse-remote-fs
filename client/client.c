@@ -1,10 +1,5 @@
 /*
- * client.c — NetFS FUSE client daemon
- *
- * Mounts a virtual directory and forwards all VFS operations
- * to the NetFS server over TCP.
- *
- * Usage: ./netfs_client --host=<ip> --port=<port> <mountpoint> [fuse_opts]
+ * client.c - NetFS FUSE client
  */
 
 #define FUSE_USE_VERSION 31
@@ -23,14 +18,14 @@
 
 #include "../common/protocol.h"
 
-/* ── Global state ────────────────────────────────────────────────── */
+
 
 static char g_host[256] = "127.0.0.1";
 static int  g_port      = 9000;
 static int  g_sockfd    = -1;
 static pthread_mutex_t g_sock_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* ── Connection management ───────────────────────────────────────── */
+
 
 static int connect_to_server(void)
 {
@@ -64,7 +59,7 @@ static void reconnect(void)
     g_sockfd = connect_to_server();
 }
 
-/* ── Payload builder helpers ─────────────────────────────────────── */
+
 
 /* Encode a path: [path_len:2B][path] */
 static int encode_path(uint8_t *buf, size_t cap, const char *path, size_t *pos)
@@ -96,11 +91,7 @@ static void encode_i64(uint8_t *buf, size_t *pos, int64_t val)
     *pos += 8;
 }
 
-/*
- * Thread-safe request-response round trip.
- * Sends a request, receives the response. On failure, attempts reconnect once.
- * Caller must free *resp_payload.
- */
+// Thread-safe RPC with reconnect
 static int do_rpc(uint8_t opcode, const void *req, uint32_t req_len,
                   int32_t *status, void **resp_payload, uint32_t *resp_len)
 {
@@ -133,7 +124,7 @@ static int do_rpc(uint8_t opcode, const void *req, uint32_t req_len,
     return 0;
 }
 
-/* ── FUSE Callbacks ──────────────────────────────────────────────── */
+
 
 static int nfs_getattr(const char *path, struct stat *stbuf,
                        struct fuse_file_info *fi)
@@ -214,7 +205,7 @@ static int nfs_read(const char *path, char *buf, size_t size, off_t offset,
     int ret = do_rpc(OP_READ, req, (uint32_t)pos, &status, &resp, &rlen);
     if (ret < 0) return ret;
     if (status < 0) { free(resp); return status; }
-    /* status = bytes read */
+    // bytes read
     uint32_t to_copy = (uint32_t)status < rlen ? (uint32_t)status : rlen;
     if (to_copy > size) to_copy = (uint32_t)size;
     if (resp && to_copy > 0) memcpy(buf, resp, to_copy);
@@ -368,7 +359,7 @@ static int nfs_utimens(const char *path, const struct timespec ts[2],
     return status;
 }
 
-/* ── FUSE operations table ───────────────────────────────────────── */
+
 
 static const struct fuse_operations nfs_oper = {
     .getattr  = nfs_getattr,
@@ -386,7 +377,7 @@ static const struct fuse_operations nfs_oper = {
     .utimens  = nfs_utimens,
 };
 
-/* ── Main ────────────────────────────────────────────────────────── */
+
 
 static void usage(const char *prog)
 {
@@ -397,7 +388,7 @@ static void usage(const char *prog)
 
 int main(int argc, char *argv[])
 {
-    /* Extract --host and --port from argv before passing to fuse_main */
+    // pull out host/port from args
     int fuse_argc = 0;
     char **fuse_argv = malloc(sizeof(char *) * (argc + 1));
     if (!fuse_argv) { perror("malloc"); return 1; }

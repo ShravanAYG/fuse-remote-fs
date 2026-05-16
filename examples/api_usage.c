@@ -1,8 +1,5 @@
 /*
- * example.c — Demonstrates the NetFS C API
- *
- * Build:  make example
- * Run:    ./netfs_example        (assumes server on 127.0.0.1:9000)
+ * example of how to use the api
  */
 
 #include "../api/netfs_api.h"
@@ -20,7 +17,7 @@ int main(int argc, char *argv[])
         port = atoi(argv[2]);
     }
 
-    /* Connect */
+    // connect
     printf("Connecting to %s:%d ...\n", host, port);
     netfs_ctx *ctx = netfs_connect(host, port);
     if (!ctx) {
@@ -29,7 +26,7 @@ int main(int argc, char *argv[])
     }
     printf("Connected.\n\n");
 
-    /* Create a file and write content */
+    // write something
     printf("Creating /demo.txt ...\n");
     int ret = netfs_create_file(ctx, "/demo.txt", 0644);
     printf("  create: %s\n\n", ret == 0 ? "OK" : "FAIL");
@@ -39,12 +36,12 @@ int main(int argc, char *argv[])
     ret = netfs_write_file(ctx, "/demo.txt", msg, strlen(msg), 0);
     printf("  write: %d bytes\n\n", ret);
 
-    /* Read it back into a char buffer */
+    // read back
     char buf[256] = {0};
     int n = netfs_read_file(ctx, "/demo.txt", buf, sizeof(buf) - 1, 0);
     printf("Read %d bytes: \"%s\"\n\n", n, buf);
 
-    /* Stat the file */
+    // check stat
     struct stat st;
     ret = netfs_stat(ctx, "/demo.txt", &st);
     if (ret == 0) {
@@ -54,12 +51,12 @@ int main(int argc, char *argv[])
     }
     printf("\n");
 
-    /* Create a directory */
+    // dir ops
     printf("Creating /api_test_dir ...\n");
     ret = netfs_mkdir(ctx, "/api_test_dir", 0755);
     printf("  mkdir: %s\n\n", ret == 0 ? "OK" : "FAIL");
 
-    /* List the root directory */
+    // list root
     char *entries[64];
     int count = netfs_list_dir(ctx, "/", entries, 64);
     printf("Root directory (%d entries):\n", count);
@@ -69,23 +66,23 @@ int main(int argc, char *argv[])
     }
     printf("\n");
 
-    /* Rename the file */
+    // move it
     printf("Renaming /demo.txt -> /demo_renamed.txt ...\n");
     ret = netfs_rename(ctx, "/demo.txt", "/demo_renamed.txt");
     printf("  rename: %s\n\n", ret == 0 ? "OK" : "FAIL");
 
-    /* Read from the renamed file */
+    // read again
     memset(buf, 0, sizeof(buf));
     n = netfs_read_file(ctx, "/demo_renamed.txt", buf, sizeof(buf) - 1, 0);
     printf("Read renamed file (%d bytes): \"%s\"\n\n", n, buf);
 
-    /* Cleanup: delete file and dir */
+    // cleanup
     printf("Cleaning up...\n");
     netfs_delete_file(ctx, "/demo_renamed.txt");
     netfs_rmdir(ctx, "/api_test_dir");
     printf("  Done.\n\n");
 
-    /* Disconnect */
+    // bye
     netfs_disconnect(ctx);
     printf("Disconnected.\n");
     return 0;

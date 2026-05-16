@@ -1,7 +1,5 @@
 #!/bin/bash
-# run_api_example.sh — Build and run the C API example
-#
-# Usage: ./run_api_example.sh [host] [port]
+# run the api example
 
 set -e
 

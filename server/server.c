@@ -1,7 +1,5 @@
 /*
- * server.c — NetFS server main entry point
- *
- * Usage: ./netfs_server <port> <backing_directory>
+ * server.c - NetFS server
  */
 
 #include "../common/protocol.h"

@@ -1,5 +1,5 @@
 /*
- * handlers.h — Server-side operation handler declarations for NetFS
+ * handlers.h - Server operation handlers
  */
 
 #ifndef NETFS_HANDLERS_H
@@ -7,16 +7,7 @@
 
 #include <stdint.h>
 
-/*
- * Each handler reads from the client socket, performs the operation
- * on the backing directory, and sends the response.
- *
- * Parameters:
- *   client_fd  — connected socket to the client
- *   base_dir   — absolute path to the backing directory
- *   payload    — request payload (already received, caller frees)
- *   payload_len — length of the payload
- */
+
 
 void handle_getattr(int client_fd, const char *base_dir,
                     const void *payload, uint32_t payload_len);

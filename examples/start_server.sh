@@ -1,9 +1,5 @@
 #!/bin/bash
-# start_server.sh — Start the NetFS server
-#
-# Usage: ./start_server.sh [port] [backing_dir]
-#   port        — TCP port to listen on (default: 9000)
-#   backing_dir — directory to serve (default: ./shared)
+# start server
 
 set -e
 

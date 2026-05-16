@@ -1,104 +1,71 @@
-# NetFS - FUSE Network Filesystem
+# NetFS
 
-A client/server network filesystem built with FUSE3 and TCP sockets in C.
-The **server** exposes a real directory over the network, and the **client**
-mounts a virtual FUSE directory that transparently forwards all file
-operations to the server.
+Quick and dirty network filesystem built with FUSE3 and TCP sockets. 
+
+Basically, the **server** shares a folder over a socket, and the **client** mounts it locally so you can use it like a normal disk.
 
 ## Architecture
 
-```
-User Apps ─→ Kernel VFS ─→ /dev/fuse ─→ [netfs_client] ──TCP──→ [netfs_server] ─→ Backing Dir
-```
+Apps -> Kernel -> FUSE -> [netfs_client] ---TCP---> [netfs_server] -> Backing Dir
 
-## Supported Operations
+## How to build
 
-| Operation | Description               |
-|-----------|---------------------------|
-| getattr   | File/dir metadata (stat)  |
-| readdir   | List directory contents   |
-| open      | Open a file               |
-| read      | Read file data            |
-| write     | Write file data           |
-| create    | Create a new file         |
-| mkdir     | Create a directory        |
-| unlink    | Delete a file             |
-| rmdir     | Remove a directory        |
-| rename    | Rename/move a file or dir |
-| truncate  | Resize a file             |
-| chmod     | Change file permissions   |
-| utimens   | Update timestamps         |
-
-## Building
+You'll need `gcc` and `libfuse3-dev`.
 
 ```bash
-# Requires: gcc, libfuse3-dev (or fuse3 on Arch)
 make
 ```
 
-This produces two binaries: `netfs_server` and `netfs_client`.
+This gives you `netfs_server` and `netfs_client`.
 
-## Usage
+## How to use
 
 ### 1. Start the server
 
 ```bash
-# Serve the contents of /path/to/shared/dir on port 9000
-./netfs_server 9000 /path/to/shared/dir
+# Serve /some/dir on port 9000
+./netfs_server 9000 /some/dir
 ```
 
-### 2. Mount the client
+### 2. Mount it
 
 ```bash
-# Create a mountpoint
-mkdir -p /tmp/netfs_mount
+mkdir -p ./mnt
 
-# Mount (foreground mode for debugging)
-./netfs_client --host=127.0.0.1 --port=9000 /tmp/netfs_mount -f
-
-# Or run in background (daemon mode)
-./netfs_client --host=127.0.0.1 --port=9000 /tmp/netfs_mount
+# Mount it (foreground mode)
+./netfs_client --host=127.0.0.1 --port=9000 ./mnt -f
 ```
 
-### 3. Use the filesystem
+### 3. Do stuff
 
 ```bash
-ls /tmp/netfs_mount
-echo "hello world" > /tmp/netfs_mount/test.txt
-cat /tmp/netfs_mount/test.txt
-mkdir /tmp/netfs_mount/subdir
-rm /tmp/netfs_mount/test.txt
+ls ./mnt
+echo "test" > ./mnt/file.txt
+cat ./mnt/file.txt
 ```
 
 ### 4. Unmount
 
 ```bash
-fusermount3 -u /tmp/netfs_mount
+fusermount3 -u ./mnt
 ```
 
-## Project Structure
+## Stuff it supports
 
-```
-├── Makefile              # Build system
-├── README.md             # This file
-├── common/
-│   ├── protocol.h        # Wire protocol definitions
-│   └── protocol.c        # Serialization/deserialization
-├── server/
-│   ├── server.c          # TCP server main loop
-│   ├── handlers.h        # Handler declarations
-│   └── handlers.c        # Filesystem operation handlers
-└── client/
-    └── client.c          # FUSE client daemon
-```
+- getattr
+- readdir
+- open/read/write
+- create/mkdir
+- unlink/rmdir
+- rename
+- truncate
+- chmod/utimens
 
-## Wire Protocol
+## Protocol
 
-Simple length-prefixed binary protocol:
+Just a simple length-prefixed binary thing:
 
-**Request:** `[opcode:1B][payload_len:4B][payload:varN]`  
-**Response:** `[status:4B][payload_len:4B][payload:varN]`
+- **Request:** `[opcode:1B][len:4B][payload:var]`
+- **Response:** `[status:4B][len:4B][payload:var]`
 
-- Status = 0 on success, negative errno on failure
-- All multi-byte integers in network byte order for headers,
-  big-endian for payload fields
+Status 0 means OK, negative is -errno.

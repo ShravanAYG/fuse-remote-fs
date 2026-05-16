@@ -1,8 +1,5 @@
 /*
- * netfs_api.c — NetFS Client API implementation
- *
- * Uses the existing wire protocol (common/protocol.h) to communicate
- * with the NetFS server over TCP.
+ * netfs_api.c - Client API implementation
  */
 
 #include "netfs_api.h"
@@ -17,7 +14,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-/* ── Internal context ────────────────────────────────────────────── */
+
 
 struct netfs_ctx {
     int  sockfd;
@@ -25,7 +22,7 @@ struct netfs_ctx {
     int  port;
 };
 
-/* ── Payload encoding helpers ────────────────────────────────────── */
+
 
 static int encode_path(uint8_t *buf, size_t cap,
                        const char *path, size_t *pos)
@@ -69,7 +66,7 @@ static int do_rpc(netfs_ctx *ctx, uint8_t opcode,
     return 0;
 }
 
-/* ── Connection ──────────────────────────────────────────────────── */
+
 
 netfs_ctx *netfs_connect(const char *host, int port)
 {
@@ -103,7 +100,7 @@ void netfs_disconnect(netfs_ctx *ctx)
     free(ctx);
 }
 
-/* ── File I/O ────────────────────────────────────────────────────── */
+
 
 int netfs_read_file(netfs_ctx *ctx, const char *path,
                     char *buf, size_t size, off_t offset)
@@ -122,7 +119,7 @@ int netfs_read_file(netfs_ctx *ctx, const char *path,
     if (ret < 0) return ret;
     if (status < 0) { free(resp); return status; }
 
-    /* status = bytes read by server */
+    // server returns bytes read in status
     uint32_t to_copy = (uint32_t)status < rlen ? (uint32_t)status : rlen;
     if (to_copy > size) to_copy = (uint32_t)size;
     if (resp && to_copy > 0) memcpy(buf, resp, to_copy);
@@ -189,7 +186,7 @@ int netfs_delete_file(netfs_ctx *ctx, const char *path)
     return status;
 }
 
-/* ── Directory Operations ────────────────────────────────────────── */
+
 
 int netfs_mkdir(netfs_ctx *ctx, const char *path, uint32_t mode)
 {
@@ -239,7 +236,7 @@ int netfs_list_dir(netfs_ctx *ctx, const char *path,
     if (ret < 0) return ret;
     if (status != 0) { free(resp); return status; }
 
-    /* Parse: sequence of [name_len:2B][name] */
+    // parse: [len:2][name]
     int count = 0;
     uint32_t off = 0;
     const uint8_t *p = (const uint8_t *)resp;
@@ -258,7 +255,7 @@ int netfs_list_dir(netfs_ctx *ctx, const char *path,
     return count;
 }
 
-/* ── Metadata ────────────────────────────────────────────────────── */
+
 
 int netfs_stat(netfs_ctx *ctx, const char *path, struct stat *st)
 {

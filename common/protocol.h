@@ -1,8 +1,5 @@
 /*
- * protocol.h — Wire protocol definitions for NetFS
- *
- * Defines opcodes, request/response headers, serialization helpers,
- * and a portable stat structure for sending file metadata over TCP.
+ * protocol.h - Wire protocol for NetFS
  */
 
 #ifndef NETFS_PROTOCOL_H
@@ -13,7 +10,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-/* ── Operation Codes ─────────────────────────────────────────────── */
+
 
 enum netfs_opcode {
     OP_GETATTR  = 1,
@@ -31,33 +28,23 @@ enum netfs_opcode {
     OP_UTIMENS  = 13,
 };
 
-/* ── Wire Header Structures ──────────────────────────────────────── */
 
-/*
- * Request header (sent by client):
- *   [ opcode : 1 byte ][ payload_len : 4 bytes (network order) ]
- */
+
+// Request: [opcode:1][len:4]
 typedef struct {
     uint8_t  opcode;
     uint32_t payload_len;
 } __attribute__((packed)) netfs_req_header_t;
 
-/*
- * Response header (sent by server):
- *   [ status : 4 bytes (network order, 0 = ok, neg = -errno) ]
- *   [ payload_len : 4 bytes (network order) ]
- */
+// Response: [status:4][len:4]
 typedef struct {
     int32_t  status;
     uint32_t payload_len;
 } __attribute__((packed)) netfs_resp_header_t;
 
-/* ── Portable Stat Structure ─────────────────────────────────────── */
 
-/*
- * We can't send raw struct stat because its layout is arch-dependent.
- * This fixed-layout struct is used on the wire instead.
- */
+
+// fixed-layout struct for wire (arch independent)
 typedef struct {
     uint32_t mode;       /* File type and permissions */
     uint32_t nlink;      /* Number of hard links */
@@ -74,12 +61,9 @@ typedef struct {
     uint32_t blksize;    /* Block size for filesystem I/O */
 } __attribute__((packed)) netfs_stat_t;
 
-/* ── Serialization Helpers ───────────────────────────────────────── */
 
-/*
- * Reliable full-read / full-write over TCP.
- * Returns 0 on success, -1 on failure (connection lost).
- */
+
+// IO helpers
 int netfs_read_full(int fd, void *buf, size_t len);
 int netfs_write_full(int fd, const void *buf, size_t len);
 
@@ -113,7 +97,7 @@ int netfs_send_response(int fd, int32_t status,
 int netfs_recv_response(int fd, int32_t *status_out,
                         void **payload_out, uint32_t *payload_len_out);
 
-/* ── Stat Conversion Helpers ─────────────────────────────────────── */
+
 
 void netfs_stat_to_wire(const struct stat *st, netfs_stat_t *wire);
 void netfs_stat_from_wire(const netfs_stat_t *wire, struct stat *st);
